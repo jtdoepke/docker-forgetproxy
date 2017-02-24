@@ -8,8 +8,8 @@ having to configure the proxy in every container.
 You can run this container instead to just forget it and let docker run as if you had a direct connection
 to the outside world.
 
-This container is based on the [munkyboy / redsocks](https://registry.hub.docker.com/u/munkyboy/redsocks/) one.
-It runs entirely from inside the container.
+This container is based on the [klabs / forgetproxy](https://hub.docker.com/r/klabs/forgetproxy/) one.
+Proxy authentication support has been added.
 
 
 ## Disclaimer 
@@ -29,7 +29,7 @@ The container  interprets the environment variables http_proxy and https_proxy t
 
 ### start
 
-    docker run -ti --net=host --privileged -e http_proxy=http://myproxy:3128 -e https_proxy=http://myproxy:3128 klabs/forgetproxy
+    docker run -ti --net=host --privileged -e http_proxy=http://user:pass@myproxy:3128 -e https_proxy=http://user:pass@myproxy:3128 jtdoepke/forgetproxy
 
 It is recommended to let the container run in the foreground as it is configured to intercept the CTRL+C and clean
 the iptables rules on exit.
@@ -40,4 +40,4 @@ If you have your container running, just press CTRL+C.
 If you need to manually clean the iptables rules that are set by the container, you can run the following command
 until you get an error telling you the rules do no exist.
 
-    docker run --net=host --privileged klabs/forgetproxy stop
+    docker run --net=host --privileged jtdoepke/forgetproxy stop
