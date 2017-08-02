@@ -1,19 +1,31 @@
 #!/usr/bin/env bash
 
-iptables_rules() {
+enable_iptables_rules() {
+    # Create forgetproxy chain
+    iptables -v -t nat -N FORGETPROXY
+
     # private ip ranges are not intercepted
-    iptables -t nat -$1 PREROUTING -i docker0 -d 10.0.0.0/8 -j RETURN
-    iptables -t nat -$1 PREROUTING -i docker0 -d 127.0.0.0/8 -j RETURN
-    iptables -t nat -$1 PREROUTING -i docker0 -d 169.254.0.0/16 -j RETURN
-    iptables -t nat -$1 PREROUTING -i docker0 -d 172.16.0.0/12 -j RETURN
-    iptables -t nat -$1 PREROUTING -i docker0 -d 192.168.0.0/16 -j RETURN
-    iptables -t nat -$1 PREROUTING -i docker0 -d 224.0.0.0/4 -j RETURN
-    iptables -t nat -$1 PREROUTING -i docker0 -d 240.0.0.0/4 -j RETURN
+    iptables -v -t nat -A FORGETPROXY -d 10.0.0.0/8 -j RETURN;
+    iptables -v -t nat -A FORGETPROXY -d 127.0.0.0/8 -j RETURN;
+    iptables -v -t nat -A FORGETPROXY -d 169.254.0.0/16 -j RETURN;
+    iptables -v -t nat -A FORGETPROXY -d 172.16.0.0/12 -j RETURN;
+    iptables -v -t nat -A FORGETPROXY -d 192.168.0.0/16 -j RETURN;
+    iptables -v -t nat -A FORGETPROXY -d 224.0.0.0/4 -j RETURN;
+    iptables -v -t nat -A FORGETPROXY -d 240.0.0.0/4 -j RETURN;
 
-    iptables -t nat -$1 PREROUTING -p tcp --dport 80   -i docker0 -j REDIRECT --to 12345 2>/dev/null
-    iptables -t nat -$1 PREROUTING -p tcp --dport 8080 -i docker0 -j REDIRECT --to 12345 2>/dev/null
-    iptables -t nat -$1 PREROUTING -p tcp -i docker0 -j REDIRECT --to 12346
+    # Redirect HTTP port 80 to the http-relay proxy
+    # Anything else should be redirected to the http-connect proxy
+    iptables -v -t nat -A FORGETPROXY -p tcp --dport 80 -j REDIRECT --to 12345
+    iptables -v -t nat -A FORGETPROXY -p tcp            -j REDIRECT --to 12346
 
+    # Redirect traffic from the docker0 interface to the FORGETPROXY chain
+    iptables -v -t nat -A PREROUTING -p tcp -i docker0 -j FORGETPROXY
+}
+
+disable_iptables_rules() {
+    iptables -v -t nat -D PREROUTING -p tcp -i docker0 -j FORGETPROXY
+    iptables -v -t nat -F FORGETPROXY
+    iptables -v -t nat -X FORGETPROXY
 }
 
 append_redsocks_conf() {
@@ -50,7 +62,7 @@ cat /tmp/redsocks.conf
 
 stop() {
     echo "Cleaning iptables"
-    iptables_rules D
+    disable_iptables_rules
     pkill -9 redsocks
 }
 
@@ -82,7 +94,7 @@ run() {
     append_redsocks_conf "http-relay" $ip $port "12345" $user $pass
     append_redsocks_conf "http-connect" $ip $port "12346" $user $pass
 
-    iptables_rules A
+    enable_iptables_rules
     redsocks -c /tmp/redsocks.conf &
 
     tail -f /dev/null
