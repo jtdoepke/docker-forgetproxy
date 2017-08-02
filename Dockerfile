@@ -1,14 +1,11 @@
-FROM debian:wheezy
+FROM debian:jessie-slim
 
-RUN apt-get -q update
-RUN apt-get -qy install \
-    iptables \
-    procps \
-    psmisc \
-    redsocks
-    
+ENTRYPOINT ["/root/redsocks"]
+
+RUN apt-get -q update && apt-get -qy install \
+        iptables \
+        redsocks \
+    && rm -rf /var/lib/apt/lists/*
+
 ADD redsocks.conf /tmp/
 ADD redsocks /root/
-
-ENTRYPOINT ["/bin/bash", "/root/redsocks"]
-
