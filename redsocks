@@ -12,7 +12,7 @@ iptables_rules() {
 
     iptables -t nat -$1 PREROUTING -p tcp --dport 80   -i docker0 -j REDIRECT --to 12345 2>/dev/null
     iptables -t nat -$1 PREROUTING -p tcp --dport 8080 -i docker0 -j REDIRECT --to 12345 2>/dev/null
-    iptables -t nat -$1 PREROUTING -p tcp -i docker0 -j REDIRECT --to 12346 
+    iptables -t nat -$1 PREROUTING -p tcp -i docker0 -j REDIRECT --to 12346
 
 }
 
@@ -48,22 +48,6 @@ echo '}' >> /tmp/redsocks.conf
 cat /tmp/redsocks.conf
 }
 
-parse_ip() {
-  echo $1 | sed -nE "s/^(http(s)?:\/\/)?((.+):(.+)?@)?(.+):([0-9]+)\/?$/\6/p"
-}
-
-parse_port() {
-  echo $1 | sed -nE "s/^(http(s)?:\/\/)?((.+):(.+)?@)?(.+):([0-9]+)\/?$/\7/p"
-}
-
-parse_user() {
-  echo $1 | sed -nE "s/^(http(s)?:\/\/)?((.+):(.+)?@)?(.+):([0-9]+)\/?$/\4/p"
-}
-
-parse_password() {
-  echo $1 | sed -nE "s/^(http(s)?:\/\/)?((.+):(.+)?@)?(.+):([0-9]+)\/?$/\5/p"
-}
-
 stop() {
     echo "Cleaning iptables"
     iptables_rules D
@@ -81,29 +65,25 @@ run() {
     trap interrupted INT
     trap terminated TERM
 
-    if [ -z "$http_proxy" ]; then
-        echo "No http_proxy set. Exiting"
+    if [ -z "$1" ]; then
+        echo "No proxy address set. Exiting"
         exit 1
     fi
 
-    ip=$(parse_ip $http_proxy)
-    port=$(parse_port $http_proxy)
-    user=$(parse_user $http_proxy)
-    pass=$(parse_password $http_proxy)
-    append_redsocks_conf "http-relay" $ip $port "12345" $user $pass
-
-    if [ -z "$https_proxy" ]; then
-        https_proxy="$http_proxy"
+    if [ -z "$2" ]; then
+        echo "No proxy port set. Exiting"
+        exit 1
     fi
 
-    ip=$(parse_ip $https_proxy)
-    port=$(parse_port $https_proxy)
-    user=$(parse_user $http_proxy)
-    pass=$(parse_password $http_proxy)
+    ip=$1
+    port=$2
+    user=$3
+    pass=$4
+    append_redsocks_conf "http-relay" $ip $port "12345" $user $pass
     append_redsocks_conf "http-connect" $ip $port "12346" $user $pass
 
     iptables_rules A
-    /usr/sbin/redsocks -c /tmp/redsocks.conf &
+    redsocks -c /tmp/redsocks.conf &
 
     tail -f /dev/null
 }
@@ -118,5 +98,5 @@ terminated () {
 
 case "$1" in
     stop )  stop ;;
-    * )     run ;;
+    * )     run "$@" ;;
 esac

@@ -9,10 +9,10 @@ You can run this container instead to just forget it and let docker run as if yo
 to the outside world.
 
 This container is based on the [klabs / forgetproxy](https://hub.docker.com/r/klabs/forgetproxy/) one.
-Proxy authentication support has been added.
+Proxy authentication support has been added, and pass proxy directly instead of through environment variables.
 
 
-## Disclaimer 
+## Disclaimer
 
 **/!\ BEWARE! THIS CONTAINER MODIFIES THE IPTABLES RULES FOR THE docker0 INTERFACE ON THE HOST MACHINE!!!**
 **PLEASE READ THE EXPLANATIONS BELOW AND MAKE SURE TO EXIT IT CLEANLY OR TO RUN THE STOP COMMAND TO RESET YOUR RULES**
@@ -22,14 +22,12 @@ Proxy authentication support has been added.
 
 All network connections coming out of the docker0 interface will automatically be proxified.
 
-The container  interprets the environment variables http_proxy and https_proxy to configure the socks proxy. 
-
 
 ## How to use it
 
 ### start
 
-    docker run -ti --net=host --privileged -e http_proxy=http://user:pass@myproxy:3128 -e https_proxy=http://user:pass@myproxy:3128 jtdoepke/forgetproxy
+    docker run -ti --net=host --privileged jtdoepke/forgetproxy proxy_addr proxy_port [username] [password]
 
 It is recommended to let the container run in the foreground as it is configured to intercept the CTRL+C and clean
 the iptables rules on exit.
